@@ -1,6 +1,6 @@
 "use server";
 
-import { log } from "node:console";
+import { error, log } from "node:console";
 import { z } from "zod";
 import postgres from "postgres";
 import { revalidatePath } from "next/cache";
@@ -28,10 +28,17 @@ export async function createInvoice(formDate: FormData) {
   const amountInCents = amount * 100;
   const date = new Date().toISOString().split("T")[0];
 
-  await sql`
-    INSERT INTO invoices (customer_id, amount, status, date)
-    VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
-  `;
+  try {
+    await sql`
+      INSERT INTO invoices (customer_id, amount, status, date)
+      VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
+    `;
+  } catch (error) {
+    console.error(error);
+    return {
+      message: "Database Error: Failed to Create Invoice.",
+    };
+  }
 
   revalidatePath("/dashboard/invoices");
   redirect("/dashboard/invoices");
@@ -45,11 +52,18 @@ export async function updateInvoce(id: string, formDate: FormData) {
   });
   const amountInCents = amount * 100;
 
-  await sql`
-    UPDATE Invoices
-    SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
-    WHERE id = ${id}
+  try {
+    await sql`
+      UPDATE Invoices
+      SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
+      WHERE id = ${id}
   `;
+  } catch (error) {
+    console.error(error);
+    return {
+      message: "Database Error: Failed to Update Invoice.",
+    };
+  }
   revalidatePath("/dashboard/invoices");
   redirect("/dashboard/invoices");
 }
